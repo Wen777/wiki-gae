@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="front">
+  <p>Some project</p>
+  <ul>
+    <li>Blog</li>
+    <li>Rot13</li>
+    <li>Ascii chen</li>
+  </ul>
+</div>
+<div>
+  <p>Hot posts</p>
+  {% for post in posts %}
+    <p class="post-title">{{ post.title }}</p>
+  {% endfor %}
+  <footer>
+    <p>Posted by _hsiang</p>
+    <p>Queried {{ query_timeago }} seconds ago.</p>
+  </footer>
+</div>
+{% endblock %}
