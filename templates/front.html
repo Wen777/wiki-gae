@@ -1,21 +1,43 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="front">
-  <p>Some project</p>
-  <ul>
-    <li>Blog</li>
-    <li>Rot13</li>
-    <li>Ascii chen</li>
-  </ul>
+
+<div class="jumbotron">
+  <h1>Jumbotron</h1>
+  <p><a class="btn btn-primary btn-lg">Learn more</a></p>
 </div>
+
+
+<div class="row">
+  <div class="col-md-2"></div>
+  <div class="col-md-8">
+<div class="list-group">
+  <a href="#" class="list-group-item">
+    <h4 class="list-group-item-heading">Blog</h4>
+    <p class="list-group-item-text">Blog system</p>
+  </a>
+  <a href="#" class="list-group-item">
+    <h4 class="list-group-item-heading">Rot13</h4>
+    <p class="list-group-item-text">hash the text</p>
+  </a>
+  <a href="#" class="list-group-item">
+    <h4 class="list-group-item-heading">Ascii chen</h4>
+    <p class="list-group-item-text">Post some text picture</p>
+  </a>
+</div>
+  </div>
+  <div class="col-md-2"></div>
+</div>
+
 <div>
   <p>Hot posts</p>
   {% for post in posts %}
     <p class="post-title">{{ post.title }}</p>
   {% endfor %}
+</div>
+
   <footer>
     <p>Posted by _hsiang</p>
     <p>Queried {{ query_timeago }} seconds ago.</p>
   </footer>
-</div>
+
 {% endblock %}

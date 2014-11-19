@@ -1,6 +1,6 @@
-import json
+import json, os, re
 from string import letters
-
+import hmac
 import webapp2
 import jinja2
 
@@ -10,10 +10,24 @@ template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
                                autoescape = True)
 
+secret = '_hsiang'
 
 """
-This segmaent described basic function for render template and blog handeler.
+This segmaent described basic function for render template and wiki handeler.
 """
+
+def render_str(template, **params):
+    t = jinja_env.get_template(template)
+    return t.render(params)
+
+# Make Secure Function.
+def make_secure_val(val):
+    return '%s|%s' % (val, hmac.new(secret, val).hexdigest())
+
+def check_secure_val(secure_val):
+    val = secure_val.split('|')[0]
+    if secure_val == make_secure_val(val):
+        return val
 
 #### I don't know what's following function's feature.
 # def render_str(template, **params):
@@ -66,7 +80,8 @@ class WikiHandler(webapp2.RequestHandler):
 
 class MainPage(WikiHandler):
   def get(self):
-    render("front.html", user=user, posts=posts)
+    # self.render("front.html", user=user, posts=posts)
+    self.render("front.html")
 
 ##### user stuff
 def make_salt(length = 5):
@@ -142,48 +157,48 @@ class Post(db.Model):
 
 
 
-class BlogFront(BlogHandler):
-    def get(self):
-        posts = greetings = Post.all().order('-created')
-        if self.format == 'html':
-            self.render('front.html', posts = posts)
-        else:
-            return self.render_json([p.as_dict() for p in posts])
+# class BlogFront(BlogHandler):
+#     def get(self):
+#         posts = greetings = Post.all().order('-created')
+#         if self.format == 'html':
+#             self.render('front.html', posts = posts)
+#         else:
+#             return self.render_json([p.as_dict() for p in posts])
 
-class PostPage(BlogHandler):
-    def get(self, post_id):
-        key = db.Key.from_path('Post', int(post_id), parent=wikiPageKey())
-        post = db.get(key)
+# class PostPage(BlogHandler):
+#     def get(self, post_id):
+#         key = db.Key.from_path('Post', int(post_id), parent=wikiPageKey())
+#         post = db.get(key)
 
-        if not post:
-            self.error(404)
-            return
-        if self.format == 'html':
-            self.render("permalink.html", post = post)
-        else:
-            self.render_json(post.as_dict())
+#         if not post:
+#             self.error(404)
+#             return
+#         if self.format == 'html':
+#             self.render("permalink.html", post = post)
+#         else:
+#             self.render_json(post.as_dict())
 
-class NewPost(BlogHandler):
-    def get(self):
-        if self.user:
-            self.render("newpost.html")
-        else:
-            self.redirect("/login")
+# class NewPost(BlogHandler):
+#     def get(self):
+#         if self.user:
+#             self.render("newpost.html")
+#         else:
+#             self.redirect("/login")
 
-    def post(self):
-        if not self.user:
-            self.redirect('/blog')
+#     def post(self):
+#         if not self.user:
+#             self.redirect('/blog')
 
-        subject = self.request.get('subject')
-        content = self.request.get('content')
+#         subject = self.request.get('subject')
+#         content = self.request.get('content')
 
-        if subject and content:
-            p = Post(parent = wikiPageKey(), subject = subject, content = content)
-            p.put()
-            self.redirect('/blog/%s' % str(p.key().id()))
-        else:
-            error = "subject and content, please!"
-            self.render("newpost.html", subject=subject, content=content, error=error)
+#         if subject and content:
+#             p = Post(parent = wikiPageKey(), subject = subject, content = content)
+#             p.put()
+#             self.redirect('/blog/%s' % str(p.key().id()))
+#         else:
+#             error = "subject and content, please!"
+#             self.render("newpost.html", subject=subject, content=content, error=error)
 
 
 USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
@@ -198,102 +213,102 @@ EMAIL_RE  = re.compile(r'^[\S]+@[\S]+\.[\S]+$')
 def valid_email(email):
     return not email or EMAIL_RE.match(email)
 
-class Signup(BlogHandler):
-    def get(self):
-        self.render("signup-form.html")
+# class Signup(BlogHandler):
+#     def get(self):
+#         self.render("signup-form.html")
 
-    def post(self):
-        have_error = False
-        self.username = self.request.get('username')
-        self.password = self.request.get('password')
-        self.verify = self.request.get('verify')
-        self.email = self.request.get('email')
+#     def post(self):
+#         have_error = False
+#         self.username = self.request.get('username')
+#         self.password = self.request.get('password')
+#         self.verify = self.request.get('verify')
+#         self.email = self.request.get('email')
 
-        params = dict(username = self.username,
-                      email = self.email)
+#         params = dict(username = self.username,
+#                       email = self.email)
 
-        if not valid_username(self.username):
-            params['error_username'] = "That's not a valid username."
-            have_error = True
+#         if not valid_username(self.username):
+#             params['error_username'] = "That's not a valid username."
+#             have_error = True
 
-        if not valid_password(self.password):
-            params['error_password'] = "That wasn't a valid password."
-            have_error = True
-        elif self.password != self.verify:
-            params['error_verify'] = "Your passwords didn't match."
-            have_error = True
+#         if not valid_password(self.password):
+#             params['error_password'] = "That wasn't a valid password."
+#             have_error = True
+#         elif self.password != self.verify:
+#             params['error_verify'] = "Your passwords didn't match."
+#             have_error = True
 
-        if not valid_email(self.email):
-            params['error_email'] = "That's not a valid email."
-            have_error = True
+#         if not valid_email(self.email):
+#             params['error_email'] = "That's not a valid email."
+#             have_error = True
 
-        if have_error:
-            self.render('signup-form.html', **params)
-        else:
-            self.done()
+#         if have_error:
+#             self.render('signup-form.html', **params)
+#         else:
+#             self.done()
 
-    def done(self, *a, **kw):
-        raise NotImplementedError
+#     def done(self, *a, **kw):
+#         raise NotImplementedError
 
-class Register(Signup):
-    def done(self):
-        #make sure the user doesn't already exist
-        u = UserDB.by_name(self.username)
-        if u:
-            msg = 'That user already exists.'
-            self.render('signup-form.html', error_username = msg)
-        else:
-            u = UserDB.register(self.username, self.password, self.email)
-            u.put()
+# class Register(Signup):
+#     def done(self):
+#         #make sure the user doesn't already exist
+#         u = UserDB.by_name(self.username)
+#         if u:
+#             msg = 'That user already exists.'
+#             self.render('signup-form.html', error_username = msg)
+#         else:
+#             u = UserDB.register(self.username, self.password, self.email)
+#             u.put()
 
-            self.login(u)
-            self.redirect('/blog/welcome')
+#             self.login(u)
+#             self.redirect('/blog/welcome')
 
-class Login(BlogHandler):
-    def get(self):
-        self.render('login-form.html')
+# class Login(BlogHandler):
+#     def get(self):
+#         self.render('login-form.html')
 
-    def post(self):
-        username = self.request.get('username')
-        password = self.request.get('password')
+#     def post(self):
+#         username = self.request.get('username')
+#         password = self.request.get('password')
 
-        u = UserDB.login(username, password)
-        if u:
-            self.login(u)
-            self.redirect('/blog/welcome')
-        else:
-            msg = 'Invalid login'
-            self.render('login-form.html', error = msg)
+#         u = UserDB.login(username, password)
+#         if u:
+#             self.login(u)
+#             self.redirect('/blog/welcome')
+#         else:
+#             msg = 'Invalid login'
+#             self.render('login-form.html', error = msg)
 
-class Logout(BlogHandler):
-    def get(self):
-        self.logout()
-        self.redirect('/signup')
+# class Logout(BlogHandler):
+#     def get(self):
+#         self.logout()
+#         self.redirect('/signup')
 
-class Welcome(BlogHandler):
-    def get(self):
-        username = self.request.get('username')
-        if valid_username(username):
-            self.render('welcome.html', username = username)
-        else:
-            self.redirect('/blog/signup')
+# class Welcome(BlogHandler):
+#     def get(self):
+#         username = self.request.get('username')
+#         if valid_username(username):
+#             self.render('welcome.html', username = username)
+#         else:
+#             self.redirect('/blog/signup')
 
 PAGE_RE = r'(/(?:[a-zA-Z0-9_-]+/?)*)'
-app = webapp2.WSGIApplication([('/signup', Signup),
-                               ('/login', Login),
-                               ('/logout', Logout),
+app = webapp2.WSGIApplication([#('/signup', Signup),
+                               #('/login', Login),
+                               #('/logout', Logout),
                                ('/', MainPage),
-                               ('/_edit' + PAGE_RE, EditPage),
-                               (PAGE_RE, WikiPage),
+                               #('/_edit' + PAGE_RE, EditPage),
+                               #(PAGE_RE, WikiPage),
                                ],
                               debug=True)
 
-app = webapp2.WSGIApplication([('/', MainPage),
-                               ('/blog/?(?:.json)?', BlogFront),
-                               ('/blog/([0-9]+)(?:.json)?', PostPage),
-                               ('/blog/newpost', NewPost),
-                               ('/blog/signup', Register),
-                               ('/blog/login', Login),
-                               ('/blog/logout', Logout),
-                               ],
-                              debug=True)
+# app = webapp2.WSGIApplication([('/', MainPage),
+#                                ('/blog/?(?:.json)?', BlogFront),
+#                                ('/blog/([0-9]+)(?:.json)?', PostPage),
+#                                ('/blog/newpost', NewPost),
+#                                ('/blog/signup', Register),
+#                                ('/blog/login', Login),
+#                                ('/blog/logout', Logout),
+#                                ],
+#                               debug=True)
