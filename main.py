@@ -103,7 +103,7 @@ def users_key(group = 'default'):
 class UserDB(db.Model):
     name = db.StringProperty(required = True)
     pw_hash = db.StringProperty(required = True)
-    email = db.StringProperty()
+    email = db.StringProperty(required = True)
 
     @classmethod
     def by_id(cls, uid):
@@ -129,31 +129,31 @@ class UserDB(db.Model):
             return u
 
 
-##### blog stuff
+##### wiki post stuff
 
-def wikiPageKey(name = 'default'):
-    return db.Key.from_path('wikiPage', name)
+# def wikiPageKey(name = 'default'):
+#     return db.Key.from_path('wikiPage', name)
 
-class Post(db.Model):
-    subject = db.StringProperty(required = True)
-    content = db.TextProperty(required = True)
-    created = db.DateTimeProperty(auto_now_add = True)
-    last_modified = db.DateTimeProperty(auto_now = True)
-    creator = db.StringProperty(required = True)
-    modified_user = db.StringProperty(required = True)
-    last_modified_user = db.StringProperty(required = True)
+# class wikiPost(db.Model):
+#     subject = db.StringProperty(required = True)
+#     content = db.TextProperty(required = True)
+#     created = db.DateTimeProperty(auto_now_add = True)
+#     last_modified = db.DateTimeProperty(auto_now = True)
+#     creator = db.StringProperty(required = True)
+#     modified_user = db.StringProperty(required = True)
+#     last_modified_user = db.StringProperty(required = True)
 
-    def render(self):
-        self._render_text = self.content.replace('\n', '<br>')
-        return render_str("post.html", p = self)
+#     def render(self):
+#         self._render_text = self.content.replace('\n', '<br>')
+#         return render_str("post.html", p = self)
 
-    def as_dict(self):
-        time_format = '%c'
-        d = {'subject': self.subject,
-             'content': self.content,
-             'created': self.created.strftime(time_format),
-             'last_modified': self.last_modified.strftime(time_format)}
-        return d
+#     def as_dict(self):
+#         time_format = '%c'
+#         d = {'subject': self.subject,
+#              'content': self.content,
+#              'created': self.created.strftime(time_format),
+#              'last_modified': self.last_modified.strftime(time_format)}
+#         return d
 
 
 
@@ -211,58 +211,58 @@ def valid_password(password):
 
 EMAIL_RE  = re.compile(r'^[\S]+@[\S]+\.[\S]+$')
 def valid_email(email):
-    return not email or EMAIL_RE.match(email)
+    return  email and EMAIL_RE.match(email)
 
-# class Signup(BlogHandler):
-#     def get(self):
-#         self.render("signup-form.html")
+class Signup(WikiHandler):
+    def get(self):
+        self.render("signup-form.html")
 
-#     def post(self):
-#         have_error = False
-#         self.username = self.request.get('username')
-#         self.password = self.request.get('password')
-#         self.verify = self.request.get('verify')
-#         self.email = self.request.get('email')
+    def post(self):
+        have_error = False
+        self.username = self.request.get('username')
+        self.password = self.request.get('password')
+        self.verify = self.request.get('verify')
+        self.email = self.request.get('email')
 
-#         params = dict(username = self.username,
-#                       email = self.email)
+        params = dict(username = self.username,
+                      email = self.email)
 
-#         if not valid_username(self.username):
-#             params['error_username'] = "That's not a valid username."
-#             have_error = True
+        if not valid_username(self.username):
+            params['error_username'] = "That's not a valid username."
+            have_error = True
 
-#         if not valid_password(self.password):
-#             params['error_password'] = "That wasn't a valid password."
-#             have_error = True
-#         elif self.password != self.verify:
-#             params['error_verify'] = "Your passwords didn't match."
-#             have_error = True
+        if not valid_password(self.password):
+            params['error_password'] = "That wasn't a valid password."
+            have_error = True
+        elif self.password != self.verify:
+            params['error_verify'] = "Your passwords didn't match."
+            have_error = True
 
-#         if not valid_email(self.email):
-#             params['error_email'] = "That's not a valid email."
-#             have_error = True
+        if not valid_email(self.email):
+            params['error_email'] = "That's not a valid email."
+            have_error = True
 
-#         if have_error:
-#             self.render('signup-form.html', **params)
-#         else:
-#             self.done()
+        if have_error:
+            self.render('signup-form.html', **params)
+        else:
+            self.done()
 
-#     def done(self, *a, **kw):
-#         raise NotImplementedError
+    def done(self, *a, **kw):
+        raise NotImplementedError
 
-# class Register(Signup):
-#     def done(self):
-#         #make sure the user doesn't already exist
-#         u = UserDB.by_name(self.username)
-#         if u:
-#             msg = 'That user already exists.'
-#             self.render('signup-form.html', error_username = msg)
-#         else:
-#             u = UserDB.register(self.username, self.password, self.email)
-#             u.put()
+class Register(Signup):
+    def done(self):
+        #make sure the user doesn't already exist
+        u = UserDB.by_name(self.username)
+        if u:
+            msg = 'That user already exists.'
+            self.render('signup-form.html', error_username = msg)
+        else:
+            u = UserDB.register(self.username, self.password, self.email)
+            u.put()
 
-#             self.login(u)
-#             self.redirect('/blog/welcome')
+            self.login(u) #set cookie "login status"
+            self.redirect('/welcome')
 
 # class Login(BlogHandler):
 #     def get(self):
