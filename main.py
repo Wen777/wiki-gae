@@ -294,7 +294,7 @@ class Register(Signup):
 #             self.redirect('/blog/signup')
 
 PAGE_RE = r'(/(?:[a-zA-Z0-9_-]+/?)*)'
-app = webapp2.WSGIApplication([#('/signup', Signup),
+app = webapp2.WSGIApplication([('/signup', Signup),
                                #('/login', Login),
                                #('/logout', Logout),
                                ('/', MainPage),
