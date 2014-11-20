@@ -1,38 +1,49 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="jumbotron">
-  <h1>Jumbotron</h1>
-  <p><a class="btn btn-primary btn-lg">Learn more</a></p>
-</div>
-
-
 <div class="row">
   <div class="col-md-2"></div>
   <div class="col-md-8">
-<div class="list-group">
-  <a href="#" class="list-group-item">
-    <h4 class="list-group-item-heading">Blog</h4>
-    <p class="list-group-item-text">Blog system</p>
-  </a>
-  <a href="#" class="list-group-item">
-    <h4 class="list-group-item-heading">Rot13</h4>
-    <p class="list-group-item-text">hash the text</p>
-  </a>
-  <a href="#" class="list-group-item">
-    <h4 class="list-group-item-heading">Ascii chen</h4>
-    <p class="list-group-item-text">Post some text picture</p>
-  </a>
-</div>
+    <div class="jumbotron">
+      <h1>Fake wiki</h1>
+      <p><a class="btn btn-primary btn-lg" href="/explore">Explore wiki</a></p>
+    </div>
   </div>
   <div class="col-md-2"></div>
 </div>
 
-<div>
-  <p>Hot posts</p>
-  {% for post in posts %}
-    <p class="post-title">{{ post.title }}</p>
-  {% endfor %}
+<div class="row">
+  <div class="col-md-3"></div>
+  <div class="col-md-6">
+    <div class="list-group">
+      <a href="/blog" class="list-group-item">
+        <h4 class="list-group-item-heading">Blog</h4>
+        <p class="list-group-item-text">Blog system</p>
+      </a>
+      <a href="/rot13" class="list-group-item">
+        <h4 class="list-group-item-heading">Rot13</h4>
+        <p class="list-group-item-text">hash the text</p>
+      </a>
+      <a href="/ascii-chen" class="list-group-item">
+        <h4 class="list-group-item-heading">Ascii chen</h4>
+        <p class="list-group-item-text">Post some text picture</p>
+      </a>
+    </div>
+  </div>
+  <div class="col-md-3"></div>
+</div>
+
+<div class="row">
+  <div class="col-md-3"></div>
+  <div class="col-md-6">
+    {% if posts %}
+      <h2>Hot posts</h2>
+      {% for post in posts %}
+        <p class="post-title">{{ post.title }}</p>
+      {% endfor %}
+    {% endif %}
+  </div>
+  <div class="col-md-3"></div>
 </div>
 
   <footer>
