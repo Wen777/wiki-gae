@@ -16,9 +16,10 @@
     <div class="navbar-collapse collapse navbar-responsive-collapse">
       <ul class="nav navbar-nav navbar-right">
         {% if user %}
-        <li>{{user.name}} (<a class="login-link" href="/logout">logout</a>)</li>
+        <li><a class="login-link" href="">{{user.name}}</a></li>
+        <li><a class="login-link" href="/logout">logout</a></li>
         {% else %}
-        <li><a class="login-link" href="/signin">signin</a></li>
+        <li><a class="login-link" href="/login">login</a></li>
         <li><a class="login-link" href="/signup">signup</a></li>
         {% endif %}
       </ul>

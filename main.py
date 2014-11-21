@@ -3,6 +3,8 @@ from string import letters
 import hmac
 import webapp2
 import jinja2
+import random
+import hashlib
 
 from google.appengine.ext import db
 
@@ -264,38 +266,46 @@ class Register(Signup):
             self.login(u) #set cookie "login status"
             self.redirect('/welcome')
 
-# class Login(BlogHandler):
-#     def get(self):
-#         self.render('login-form.html')
+class Login(WikiHandler):
+    def get(self):
+        self.render('login-form.html')
 
-#     def post(self):
-#         username = self.request.get('username')
-#         password = self.request.get('password')
+    def post(self):
+        username = self.request.get('email')
+        password = self.request.get('password')
 
-#         u = UserDB.login(username, password)
-#         if u:
-#             self.login(u)
-#             self.redirect('/blog/welcome')
-#         else:
-#             msg = 'Invalid login'
-#             self.render('login-form.html', error = msg)
+        u = UserDB.login(username, password)
+        if u:
+            self.login(u)
+            self.redirect('/welcome')
+        else:
+            msg = 'Invalid login'
+            self.render('login-form.html', error = msg)
+
+class Welcome(WikiHandler):
+    def get(self):
+        if self.user:
+            self.render('welcome.html', username = self.user.name)
+        else:
+            self.redirect('/signup')
 
 # class Logout(BlogHandler):
 #     def get(self):
 #         self.logout()
 #         self.redirect('/signup')
 
-# class Welcome(BlogHandler):
+# class Welcome(WikiHandler):
 #     def get(self):
 #         username = self.request.get('username')
 #         if valid_username(username):
 #             self.render('welcome.html', username = username)
 #         else:
-#             self.redirect('/blog/signup')
+#             self.redirect('/signup')
 
 PAGE_RE = r'(/(?:[a-zA-Z0-9_-]+/?)*)'
-app = webapp2.WSGIApplication([('/signup', Signup),
-                               #('/login', Login),
+app = webapp2.WSGIApplication([('/signup', Register),
+                               ('/login', Login),
+                               ("/welcome", Welcome),
                                #('/logout', Logout),
                                ('/', MainPage),
                                #('/_edit' + PAGE_RE, EditPage),
