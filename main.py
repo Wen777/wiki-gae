@@ -74,7 +74,7 @@ class WikiHandler(webapp2.RequestHandler):
         webapp2.RequestHandler.initialize(self, *a, **kw)
         uid = self.read_secure_cookie('user_id')
         self.user = uid and UserDB.by_id(int(uid))
-
+        ## what's  that mean ? ==> uid and UserDB.by_id(int(uid))
         if self.request.url.endswith('.json'):
             self.format = 'json'
         else:
@@ -82,8 +82,12 @@ class WikiHandler(webapp2.RequestHandler):
 
 class MainPage(WikiHandler):
   def get(self):
-    # self.render("front.html", user=user, posts=posts)
-    self.render("front.html")
+        posts = greetings = WikiPostDB.all().order('-created')
+        if self.format == 'html':
+            self.render("front.html", user=self.user, posts=posts)
+        else:
+            return self.render_json([p.as_dict() for p in posts])
+    # self.render("front.html")
 
 ##### user stuff
 def make_salt(length = 5):
@@ -130,36 +134,33 @@ class UserDB(db.Model):
         if u and valid_pw(name, pw, u.pw_hash):
             return u
 
-
 ##### wiki post stuff
 
-# def wikiPageKey(name = 'default'):
-#     return db.Key.from_path('wikiPage', name)
+def wikiPageKey(name = 'default'):
+    return db.Key.from_path('wikiPage', name)
 
-# class wikiPost(db.Model):
-#     subject = db.StringProperty(required = True)
-#     content = db.TextProperty(required = True)
-#     created = db.DateTimeProperty(auto_now_add = True)
-#     last_modified = db.DateTimeProperty(auto_now = True)
-#     creator = db.StringProperty(required = True)
-#     modified_user = db.StringProperty(required = True)
-#     last_modified_user = db.StringProperty(required = True)
+class WikiPostDB(db.Model):
+    subject = db.StringProperty(required = True)
+    content = db.TextProperty(required = True)
+    created = db.DateTimeProperty(auto_now_add = True)
+    last_modified = db.DateTimeProperty(auto_now = True)
+    creator = db.StringProperty(required = True)
+    modified_user = db.StringProperty(required = True)
+    last_modified_user = db.StringProperty(required = True)
 
-#     def render(self):
-#         self._render_text = self.content.replace('\n', '<br>')
-#         return render_str("post.html", p = self)
+    def render(self):
+        self._render_text = self.content.replace('\n', '<br>')
+        return render_str("post.html", p = self)
 
-#     def as_dict(self):
-#         time_format = '%c'
-#         d = {'subject': self.subject,
-#              'content': self.content,
-#              'created': self.created.strftime(time_format),
-#              'last_modified': self.last_modified.strftime(time_format)}
-#         return d
+    def as_dict(self):
+        time_format = '%c'
+        d = {'subject': self.subject,
+             'content': self.content,
+             'created': self.created.strftime(time_format),
+             'last_modified': self.last_modified.strftime(time_format)}
+        return d
 
-
-
-# class BlogFront(BlogHandler):
+# class BlogFront(WikiHandler):
 #     def get(self):
 #         posts = greetings = Post.all().order('-created')
 #         if self.format == 'html':
@@ -167,41 +168,43 @@ class UserDB(db.Model):
 #         else:
 #             return self.render_json([p.as_dict() for p in posts])
 
-# class PostPage(BlogHandler):
-#     def get(self, post_id):
-#         key = db.Key.from_path('Post', int(post_id), parent=wikiPageKey())
-#         post = db.get(key)
+class WikiPage(WikiHandler):
+    def get(self, post_permalink):
+        key = db.Key.from_path('WikiPostDB', str(post_permalink), parent=wikiPageKey())
+        post = db.get(key)
 
-#         if not post:
-#             self.error(404)
-#             return
-#         if self.format == 'html':
-#             self.render("permalink.html", post = post)
-#         else:
-#             self.render_json(post.as_dict())
+        # if not post:
+        #     self.error(404)
+        #     return
+        if self.format == 'html':
+            self.render("permalink.html", post = post)
+        else:
+            self.render_json(post.as_dict())
 
-# class NewPost(BlogHandler):
-#     def get(self):
-#         if self.user:
-#             self.render("newpost.html")
-#         else:
-#             self.redirect("/login")
+class EditPage(WikiHandler):
+    def get(self, post_permalink):
+        if self.user:
+            key = db.Key.from_path('WikiPostDB', str(post_permalink), parent=wikiPageKey())
+            post = db.get(key)
+            self.render("edit-page.html", post=post)
+        else:
+            self.redirect("/login")
 
-#     def post(self):
-#         if not self.user:
-#             self.redirect('/blog')
+    def post(self):
+        if not self.user:
+            self.redirect('/')
 
-#         subject = self.request.get('subject')
-#         content = self.request.get('content')
+        subject = self.request.get('subject')
+        content = self.request.get('content')
+        modified_user = self.user.name
 
-#         if subject and content:
-#             p = Post(parent = wikiPageKey(), subject = subject, content = content)
-#             p.put()
-#             self.redirect('/blog/%s' % str(p.key().id()))
-#         else:
-#             error = "subject and content, please!"
-#             self.render("newpost.html", subject=subject, content=content, error=error)
-
+        if subject and content:
+            p = WikiPostDB(parent = wikiPageKey(), subject = subject, content = content)
+            p.put()
+            self.redirect('/blog/%s' % str(p.key().id()))
+        else:
+            error = "subject and content, please!"
+            self.render("newpost.html", subject=subject, content=content, error=error)
 
 USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
 def valid_username(username):
@@ -289,10 +292,10 @@ class Welcome(WikiHandler):
         else:
             self.redirect('/signup')
 
-# class Logout(BlogHandler):
-#     def get(self):
-#         self.logout()
-#         self.redirect('/signup')
+class Logout(WikiHandler):
+    def get(self):
+        self.logout()
+        self.redirect('/signup')
 
 # class Welcome(WikiHandler):
 #     def get(self):
@@ -306,10 +309,10 @@ PAGE_RE = r'(/(?:[a-zA-Z0-9_-]+/?)*)'
 app = webapp2.WSGIApplication([('/signup', Register),
                                ('/login', Login),
                                ("/welcome", Welcome),
-                               #('/logout', Logout),
+                               ('/logout', Logout),
                                ('/', MainPage),
-                               #('/_edit' + PAGE_RE, EditPage),
-                               #(PAGE_RE, WikiPage),
+                               ('/_edit' + PAGE_RE, EditPage),
+                               (PAGE_RE, WikiPage)
                                ],
                               debug=True)
 
@@ -322,3 +325,9 @@ app = webapp2.WSGIApplication([('/signup', Register),
 #                                ('/blog/logout', Logout),
 #                                ],
 #                               debug=True)
+
+
+####### From disqus
+# Append #disqus_thread to the href attribute in your links.
+# This will tell Disqus which links to look up and return the comment count.
+# For example: <a href="http://foo.com/bar.html#disqus_thread">Link</a>
