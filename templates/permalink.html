@@ -4,21 +4,15 @@
 <div class="row">
   <div class="col-md-3"></div>
   <div class="col-md-6">
-    {% if posts %}
-      <h2>Post</h2>
-        <p>{{ post.subject }}</p>
+    <p><h2>{{ post.subject }}</h2></p>
+    {% if post %}
         <p>{{ post.content }}</p>
-    {% else %}
-      <div class="jumbotron">
-        <p><h1>404 error</h1></p>
-        <p>No such article</p>
-      </div>
     {% endif %}
   </div>
   <div class="col-md-3"></div>
 </div>
 
-{% if posts %}
+{% if post %}
 <div class="row">
   <div class="col-md-2"></div>
   <div class="col-md-8">
