@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+        <h1>Sign in</h1>
+
+<table class="table table-striped table-hover ">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Created Time</th>
+      <th>Content</th>
+      <th>Last editor</th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for i in post %}
+    <tr class="info">
+      <td>{{ i.content_version }}</td>
+      <td>{{ i.created }}</td>
+      <td>{{ i.content }}</td>
+      <td>{{ i.last_modified_user }}</td>
+      <td><a href="/{{ i.subject }}?version={{ i.version }}">VIEW</a></td>
+      <td><a href="/_edit/{{ i.subject }}?v={{ i.version }}">EDIT</a></td>
+    </tr>
+</tbody>
+</table>
+{% endblock %}

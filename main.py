@@ -147,7 +147,8 @@ class WikiPostDB(db.Model):
     modified_user = db.StringProperty(required = True)
     last_modified_user = db.StringProperty(required = True)
     created = db.DateTimeProperty(auto_now_add = True)
-    last_modified = db.DateTimeProperty(auto_now = True)
+    last_modified = db.DateTimeProperty(required = True)
+    content_version = db.IntegerProperty(required = True)
 
     @classmethod
     def render(self):
@@ -179,8 +180,11 @@ class WikiPage(WikiHandler):
         post = list( db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by created DESC" %permalink[1:]) )
         if not post:
             self.redirect("/_edit%s" % str(permalink))
-        else:
-            post[0].content = str(post[0].content).replace("'\n","<br>")
+        # else:
+        #     post[0].content = str(post[0].content).replace("'\n","<br>")
+
+        # content_version = self.request.get("v") if self.request.get("v") else 0
+        # print content_version
 
         if self.format == 'html':
             self.render("permalink.html", post = post[0] if post else None)
@@ -205,21 +209,36 @@ class EditPage(WikiHandler):
         if not post:
             creator = self.user.name
             modified_user = self.user.name
+            content_version = 1
         else:
             creator = post[0].creator
             modified_user =  str(post[0].modified_user) + "|" + self.user.name
+            content_version = post[0].content_version
 
         content = str(self.request.get('content'))
         last_modified_user  = self.user.name
 
         if  content:
-            p = WikiPostDB(parent = wikiPageKey(), subject = permalink[1:], content = content, modified_user=modified_user, last_modified_user=last_modified_user, creator=creator)
+            p = WikiPostDB(parent = wikiPageKey(), subject = permalink[1:], content = content,
+                                    modified_user=modified_user, last_modified_user=last_modified_user,
+                                    creator=creator, content_version= content_version)
             p.put()
             self.redirect( '/%s' % str(permalink[1:]) )
         else:
             error = " content, please!"
             # self.render("edit-page.html", post=ppost, error=error)
             self.render("edit-page.html",post=post[0] if post else None, error=error, permalink=permalink)
+
+class HistoryPage(WikiHandler):
+    def get(self, permalink):
+        content_version = self.request.get("v")
+        print content_version
+        post = list( db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by created DESC" %permalink[1:]) )
+        if post :
+            self.render("history.html",post=post)
+        else:
+            self.redirect("/_edit%s", permalink)
+
 
 USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
 def valid_username(username):
@@ -292,7 +311,7 @@ class Login(WikiHandler):
         self.render('login-form.html')
 
     def post(self):
-        username = self.request.get('email')
+        username = self.request.get('user-name')
         password = self.request.get('password')
 
         u = UserDB.login(username, password)
@@ -315,21 +334,16 @@ class Logout(WikiHandler):
         self.logout()
         self.redirect('/signup')
 
-# class Welcome(WikiHandler):
-#     def get(self):
-#         username = self.request.get('username')
-#         if valid_username(username):
-#             self.render('welcome.html', username = username)
-#         else:
-#             self.redirect('/signup')
-
 PAGE_RE = r'(/(?:[a-zA-Z0-9_-]+/?)*)'
 app = webapp2.WSGIApplication([('/signup', Register),
                                ('/login', Login),
                                ("/welcome", Welcome),
                                ('/logout', Logout),
                                ('/', MainPage),
+#                                ('/blog/?(?:.json)?', BlogFront),
+#                                ('/blog/([0-9]+)(?:.json)?', PostPage),
                                ('/_edit' + PAGE_RE, EditPage),
+                               ('/_history' + PAGE_RE, HistoryPage),
                                (PAGE_RE, WikiPage)
                                ],
                               debug=True)
