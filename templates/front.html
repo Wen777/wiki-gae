@@ -38,8 +38,10 @@
   <div class="col-md-6">
     {% if posts %}
       <h2>Hot posts</h2>
+      <hr>
       {% for post in posts %}
-        <p class="post-title">{{ post.title }}</p>
+        <p class="post-title"><a href="/{{ post.subject }}">{{ post.subject }}</a></p>
+        <hr>
       {% endfor %}
     {% endif %}
   </div>

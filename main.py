@@ -70,6 +70,7 @@ class WikiHandler(webapp2.RequestHandler):
     def logout(self):
         self.response.headers.add_header('Set-Cookie', 'user_id=; Path=/')
 
+
     def initialize(self, *a, **kw):
         webapp2.RequestHandler.initialize(self, *a, **kw)
         uid = self.read_secure_cookie('user_id')
@@ -87,7 +88,7 @@ class MainPage(WikiHandler):
             self.render("front.html", user=self.user, posts=posts)
         else:
             return self.render_json([p.as_dict() for p in posts])
-    # self.render("front.html")
+
 
 ##### user stuff
 def make_salt(length = 5):
@@ -142,16 +143,18 @@ def wikiPageKey(name = 'default'):
 class WikiPostDB(db.Model):
     subject = db.StringProperty(required = True)
     content = db.TextProperty(required = True)
-    created = db.DateTimeProperty(auto_now_add = True)
-    last_modified = db.DateTimeProperty(auto_now = True)
     creator = db.StringProperty(required = True)
     modified_user = db.StringProperty(required = True)
     last_modified_user = db.StringProperty(required = True)
+    created = db.DateTimeProperty(auto_now_add = True)
+    last_modified = db.DateTimeProperty(auto_now = True)
 
+    @classmethod
     def render(self):
         self._render_text = self.content.replace('\n', '<br>')
         return render_str("post.html", p = self)
 
+    @classmethod
     def as_dict(self):
         time_format = '%c'
         d = {'subject': self.subject,
@@ -169,42 +172,54 @@ class WikiPostDB(db.Model):
 #             return self.render_json([p.as_dict() for p in posts])
 
 class WikiPage(WikiHandler):
-    def get(self, post_permalink):
-        key = db.Key.from_path('WikiPostDB', str(post_permalink), parent=wikiPageKey())
-        post = db.get(key)
+    def get(self, permalink):
 
-        # if not post:
-        #     self.error(404)
-        #     return
+        # pageQuery = db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by created DESC" %permalink[1:])
+        #^^^^ Is another way to make pagequery iterable
+        post = list( db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by created DESC" %permalink[1:]) )
+        if not post:
+            self.redirect("/_edit%s" % str(permalink))
+        else:
+            post[0].content = str(post[0].content).replace("'\n","<br>")
+
         if self.format == 'html':
-            self.render("permalink.html", post = post)
+            self.render("permalink.html", post = post[0] if post else None)
         else:
             self.render_json(post.as_dict())
 
 class EditPage(WikiHandler):
-    def get(self, post_permalink):
+    def get(self, permalink):
         if self.user:
-            key = db.Key.from_path('WikiPostDB', str(post_permalink), parent=wikiPageKey())
-            post = db.get(key)
-            self.render("edit-page.html", post=post)
+            post = list( db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by created DESC" %permalink[1:]) )
+            # post = db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by created DESC" %permalink[1:]).get()
+            self.render("edit-page.html", post=post[0] if post else None , permalink=permalink)
         else:
             self.redirect("/login")
 
-    def post(self):
+    def post(self, permalink):
         if not self.user:
-            self.redirect('/')
+            self.redirect('/login')
+        post = list( db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by created DESC" %permalink[1:]) )
+        # post = db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by created DESC" %permalink[1:]).get()
 
-        subject = self.request.get('subject')
-        content = self.request.get('content')
-        modified_user = self.user.name
-
-        if subject and content:
-            p = WikiPostDB(parent = wikiPageKey(), subject = subject, content = content)
-            p.put()
-            self.redirect('/blog/%s' % str(p.key().id()))
+        if not post:
+            creator = self.user.name
+            modified_user = self.user.name
         else:
-            error = "subject and content, please!"
-            self.render("newpost.html", subject=subject, content=content, error=error)
+            creator = post[0].creator
+            modified_user =  str(post[0].modified_user) + "|" + self.user.name
+
+        content = str(self.request.get('content'))
+        last_modified_user  = self.user.name
+
+        if  content:
+            p = WikiPostDB(parent = wikiPageKey(), subject = permalink[1:], content = content, modified_user=modified_user, last_modified_user=last_modified_user, creator=creator)
+            p.put()
+            self.redirect( '/%s' % str(permalink[1:]) )
+        else:
+            error = " content, please!"
+            # self.render("edit-page.html", post=ppost, error=error)
+            self.render("edit-page.html",post=post[0] if post else None, error=error, permalink=permalink)
 
 USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
 def valid_username(username):
@@ -220,7 +235,10 @@ def valid_email(email):
 
 class Signup(WikiHandler):
     def get(self):
-        self.render("signup-form.html")
+        if self.user:
+            self.render('welcome.html', username = self.user.name)
+        else:
+            self.render("signup-form.html")
 
     def post(self):
         have_error = False
