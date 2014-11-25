@@ -83,7 +83,7 @@ class WikiHandler(webapp2.RequestHandler):
 
 class MainPage(WikiHandler):
   def get(self):
-        posts = greetings = WikiPostDB.all().order('-last_modified')
+        posts = greetings = WikiPostDB.all().order('-last_modified').fetch(limit=10)
         if self.format == 'html':
             self.render("front.html", user=self.user, posts=posts)
         else:
@@ -178,18 +178,19 @@ class WikiPage(WikiHandler):
         # pageQuery = db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by created DESC" %permalink[1:])
         #^^^^ Is another way to make pagequery iterable
         post = list( db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by content_version DESC" %permalink[1:]) )
+        ver = self.request.get("v")
         if not post:
             self.redirect("/_edit%s" % str(permalink))
-
-        ver = self.request.get("v")
-        if ver and ver.isdigit():
+        elif ver and ver.isdigit():
             ver = abs(int(ver))
             content_version = ver if ver < len(post) else min(ver, 0)
+            post = post[content_version]
         else:
             content_version = 0
+            post = post[content_version]
 
         if self.format == 'html':
-            self.render("permalink.html", post = post[content_version] )
+            self.render("permalink.html", post = post )
         else:
             self.render_json(post.as_dict())
 
@@ -239,6 +240,15 @@ class HistoryPage(WikiHandler):
             self.render("history.html",post=post)
         else:
             self.redirect("/_edit%s", permalink)
+
+class ExploreWiki(WikiHandler):
+    """docstring for ExploreWiki"""
+    def get(self):
+        posts = WikiPostDB.all().order('-last_modified').fetch(limit=10)
+        if self.format == 'html':
+            self.render("explore.html", user=self.user, posts=posts)
+        else:
+            return self.render_json([p.as_dict() for p in posts])
 
 
 USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
@@ -339,6 +349,7 @@ PAGE_RE = r'(/(?:[a-zA-Z0-9_-]+/?)*)'
 app = webapp2.WSGIApplication([('/signup', Register),
                                ('/login', Login),
                                ("/welcome", Welcome),
+                               ("/explore", ExploreWiki),
                                ('/logout', Logout),
                                ('/', MainPage),
 #                                ('/blog/?(?:.json)?', BlogFront),
