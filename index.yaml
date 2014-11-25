@@ -13,6 +13,12 @@ indexes:
 - kind: WikiPostDB
   properties:
   - name: subject
+  - name: content_version
+    direction: desc
+
+- kind: WikiPostDB
+  properties:
+  - name: subject
   - name: created
 
 - kind: WikiPostDB
