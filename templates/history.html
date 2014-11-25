@@ -9,6 +9,7 @@
       <th>Created Time</th>
       <th>Content</th>
       <th>Last editor</th>
+      <th>Last modified time</th>
       <th></th>
       <th></th>
     </tr>
@@ -19,10 +20,12 @@
       <td>{{ i.content_version }}</td>
       <td>{{ i.created }}</td>
       <td>{{ i.content }}</td>
+      <td>{{ i.last_modified }}</td>
       <td>{{ i.last_modified_user }}</td>
-      <td><a href="/{{ i.subject }}?version={{ i.version }}">VIEW</a></td>
-      <td><a href="/_edit/{{ i.subject }}?v={{ i.version }}">EDIT</a></td>
+      <td><a href="/{{ i.subject }}?v={{ i.content_version }}">VIEW</a></td>
+      <td><a href="/_edit/{{ i.subject }}?v={{ i.content_version }}">EDIT</a></td>
     </tr>
+    {% endfor %}
 </tbody>
 </table>
 {% endblock %}

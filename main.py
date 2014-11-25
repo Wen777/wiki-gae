@@ -1,11 +1,11 @@
-import json, os, re
+import json, os, re, cgi
 from string import letters
 import hmac
 import webapp2
 import jinja2
 import random
 import hashlib
-
+from time import strftime, localtime, time
 from google.appengine.ext import db
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
@@ -83,7 +83,7 @@ class WikiHandler(webapp2.RequestHandler):
 
 class MainPage(WikiHandler):
   def get(self):
-        posts = greetings = WikiPostDB.all().order('-created')
+        posts = greetings = WikiPostDB.all().order('-last_modified')
         if self.format == 'html':
             self.render("front.html", user=self.user, posts=posts)
         else:
@@ -146,8 +146,8 @@ class WikiPostDB(db.Model):
     creator = db.StringProperty(required = True)
     modified_user = db.StringProperty(required = True)
     last_modified_user = db.StringProperty(required = True)
-    created = db.DateTimeProperty(auto_now_add = True)
-    last_modified = db.DateTimeProperty(required = True)
+    created = db.StringProperty(required = True)
+    last_modified = db.DateTimeProperty(auto_now_add = True)
     content_version = db.IntegerProperty(required = True)
 
     @classmethod
@@ -157,10 +157,10 @@ class WikiPostDB(db.Model):
 
     @classmethod
     def as_dict(self):
-        time_format = '%c'
+        time_format = '%Y-%m-%d %H:%M:%S'
         d = {'subject': self.subject,
              'content': self.content,
-             'created': self.created.strftime(time_format),
+             'created': self.created,
              'last_modified': self.last_modified.strftime(time_format)}
         return d
 
@@ -177,24 +177,26 @@ class WikiPage(WikiHandler):
 
         # pageQuery = db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by created DESC" %permalink[1:])
         #^^^^ Is another way to make pagequery iterable
-        post = list( db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by created DESC" %permalink[1:]) )
+        post = list( db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by content_version DESC" %permalink[1:]) )
         if not post:
             self.redirect("/_edit%s" % str(permalink))
-        # else:
-        #     post[0].content = str(post[0].content).replace("'\n","<br>")
 
-        # content_version = self.request.get("v") if self.request.get("v") else 0
-        # print content_version
+        ver = self.request.get("v")
+        if ver and ver.isdigit():
+            ver = abs(int(ver))
+            content_version = ver if ver < len(post) else min(ver, 0)
+        else:
+            content_version = 0
 
         if self.format == 'html':
-            self.render("permalink.html", post = post[0] if post else None)
+            self.render("permalink.html", post = post[content_version] )
         else:
             self.render_json(post.as_dict())
 
 class EditPage(WikiHandler):
     def get(self, permalink):
         if self.user:
-            post = list( db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by created DESC" %permalink[1:]) )
+            post = list( db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by content_version DESC" %permalink[1:]) )
             # post = db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by created DESC" %permalink[1:]).get()
             self.render("edit-page.html", post=post[0] if post else None , permalink=permalink)
         else:
@@ -203,37 +205,36 @@ class EditPage(WikiHandler):
     def post(self, permalink):
         if not self.user:
             self.redirect('/login')
-        post = list( db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by created DESC" %permalink[1:]) )
+        post = list( db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by content_version DESC" %permalink[1:]) )
         # post = db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by created DESC" %permalink[1:]).get()
 
         if not post:
             creator = self.user.name
             modified_user = self.user.name
             content_version = 1
+            created = strftime('%Y-%m-%d %H:%M:%S', localtime(time()))
         else:
             creator = post[0].creator
             modified_user =  str(post[0].modified_user) + "|" + self.user.name
-            content_version = post[0].content_version
+            content_version = post[0].content_version + 1
+            created = post[0].created
 
-        content = str(self.request.get('content'))
+        content = cgi.escape( str(self.request.get('content')), True )
         last_modified_user  = self.user.name
 
         if  content:
-            p = WikiPostDB(parent = wikiPageKey(), subject = permalink[1:], content = content,
-                                    modified_user=modified_user, last_modified_user=last_modified_user,
-                                    creator=creator, content_version= content_version)
+            p = WikiPostDB(parent = wikiPageKey(), subject = permalink[1:], content = content,\
+                                    modified_user=modified_user, last_modified_user=last_modified_user,\
+                                    creator=creator, content_version= content_version, created=created)
             p.put()
             self.redirect( '/%s' % str(permalink[1:]) )
         else:
             error = " content, please!"
-            # self.render("edit-page.html", post=ppost, error=error)
             self.render("edit-page.html",post=post[0] if post else None, error=error, permalink=permalink)
 
 class HistoryPage(WikiHandler):
     def get(self, permalink):
-        content_version = self.request.get("v")
-        print content_version
-        post = list( db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by created DESC" %permalink[1:]) )
+        post = list( db.GqlQuery("SELECT * FROM WikiPostDB WHERE subject= '%s' order by content_version DESC" %permalink[1:]) )
         if post :
             self.render("history.html",post=post)
         else:
