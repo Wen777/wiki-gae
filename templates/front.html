@@ -12,7 +12,25 @@
   <div class="col-md-2"></div>
 </div>
 
+<div class="row">
+  <div class="col-md-3"></div>
+  <div class="col-md-6">
 
+           <form class="form-horizontal" method="POST">
+                <fieldset>
+                    <legend>Search</legend>
+                    <div class="form-group">
+                        <label class="col-lg-3 control-label" for="search-eng"></label>
+                        <div class="col-lg-6">
+                            <input class="form-control" name="search-eng" placeholder="Item">
+                        </div>
+                    </div>
+                </fieldset>
+            </form>
+
+  </div>
+  <div class="col-md-3"></div>
+</div>
 
 <div class="row">
   <div class="col-md-3"></div>
@@ -30,11 +48,12 @@
 </div>
 
   <footer>
-    <p>Posted by _hsiang</p>
-    <p>Queried {{ query_timeago }} seconds ago.</p>
+    <p>@_hsiang</p>
   </footer>
 
 {% endblock %}
+
+<!-- ?<p>Queried {{ query_timeago }} seconds ago.</p> -->
 
 <!--
 <div class="row">
